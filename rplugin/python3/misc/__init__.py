@@ -47,6 +47,23 @@ class Base(object):
         logger.deplus(f"{row}, {col}")
         return self.buffer[row - 1][col - 1]
 
+    def get_lines_of_range(self, range):
+        start, end = range
+        lines = self.buffer[start - 1: end]
+        return lines
+
+    def replace_lines_by_range(self, new_lines, range):
+        start, end = range
+        self.buffer[start - 1: end] = new_lines
+
+    def replace_line_by_cursor(self, new_lines):
+        before = self.buffer[:self.row - 1]
+        after = self.buffer[self.row:]
+        self.buffer[:] = before + new_lines + after
+
+    def replace_line_one_by_one(self, new_line):
+        self.replace_line_by_cursor([new_line])
+
 
 @neovim.plugin
 class Main(Base):
@@ -54,6 +71,12 @@ class Main(Base):
     def delete_empty_lines(self):
         lines = [line for line in self.buffer if line]
         self.buffer[:] = lines
+
+    @neovim.command('RangeReverseLines', range=True)
+    def range_reverse_lines(self, range):
+        lines = self.get_lines_of_range(range)
+        lines = [common.reverse_line(line) for line in lines]
+        self.replace_lines_by_range(lines, range)
 
     @neovim.command('ShowSysPath')
     def show_sys_path(self):
@@ -68,31 +91,37 @@ class Main(Base):
 
     @neovim.command('RangeTrimTrailingSpaces', range=True)
     def trim_trailing_spaces_with_range(self, range, *args, **kwargs):
-        start, end = range
-        lines = self.buffer[start - 1: end]
+        lines = self.get_lines_of_range(range)
         lines = [line.rstrip() for line in lines]
-        self.buffer[start - 1: end] = lines
+        self.replace_lines_by_range(lines, range)
 
     @neovim.command('TrimTrailingSpaces')
     def trim_trailing_spaces(self):
         lines = [line.rstrip() for line in self.buffer]
         self.buffer[:] = lines
 
+    @neovim.command('ReverseLine')
+    def reverse_line(self):
+        spaces, content = common.get_spaces_and_content(self.line)
+        if not content:
+            return
+        new_line = common.reverse_line(self.line)
+        self.replace_line_one_by_one(new_line)
+
     @neovim.command('SplitLine')
     def split_line(self):
         spaces, content = common.get_spaces_and_content(self.line)
+        if not content:
+            return
         lines = common.split(content)
         lines = [f"{spaces}{one}," for one in lines]
-        before = self.buffer[:self.row - 1]
-        after = self.buffer[self.row:]
-        self.buffer[:] = before + lines + after
+        self.replace_line_by_cursor(lines)
 
-    @neovim.command('DuplicateInLine', range=True)
-    def duplicate_in_line(self, range):
-        start, end = range
-        lines = self.buffer[start - 1: end]
+    @neovim.command('RangeDuplicateInLine', range=True)
+    def range_duplicate_in_line(self, range):
+        lines = self.get_lines_of_range(range)
         lines = [f"{line} {line}" for line in lines]
-        self.buffer[start - 1: end] = lines
+        self.replace_lines_by_range(lines, range)
 
     @neovim.command('FormatXML')
     def pretty_print_xml(self):

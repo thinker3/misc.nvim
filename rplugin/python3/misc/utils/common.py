@@ -20,10 +20,22 @@ def split(string):
 
 
 def get_spaces_and_content(string):
+    spaces = ''
     for index, char in enumerate(string):
-        if char != ' ':
+        if char == ' ':
+            spaces += char
+        else:
             break
-    return string[:index], string[index:].strip()
+    return spaces, string[len(spaces):].strip()
+
+
+def reverse_line(line):
+    spaces, content = get_spaces_and_content(line)
+    if not content:
+        return line
+    temp = list(content)
+    temp.reverse()
+    return spaces + ''.join(temp)
 
 
 def log_sys_path(logger):
