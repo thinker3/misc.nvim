@@ -7,6 +7,12 @@ import sys
 common_delimiter = re.compile(r'\s*[,;，；]\s*')
 
 
+def keep_space_in_xml_node_end_if_has_props(line):
+    if '=' in line:
+        return line.replace('/>', ' />')
+    return line
+
+
 def split(string):
     ones = common_delimiter.split(string)
     ones = [one for one in ones if one != '']

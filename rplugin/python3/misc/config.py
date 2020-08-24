@@ -15,3 +15,4 @@ except ImportError:
 
 base_path = os.path.expanduser(base_path)
 log_path = os.path.join(base_path, 'debug.log')
+module_path = os.path.join(base_path, 'rplugin/python3/misc')

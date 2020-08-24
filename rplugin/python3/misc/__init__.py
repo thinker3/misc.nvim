@@ -4,6 +4,7 @@
 import sys
 
 import neovim
+from xml.dom import minidom
 
 from .utils import common
 from .utils.log import logger
@@ -49,6 +50,11 @@ class Base(object):
 
 @neovim.plugin
 class Main(Base):
+    @neovim.command('DeleteEmptyLines')
+    def delete_empty_lines(self):
+        lines = [line for line in self.buffer if line]
+        self.buffer[:] = lines
+
     @neovim.command('ShowSysPath')
     def show_sys_path(self):
         for p in sys.path:
@@ -87,6 +93,27 @@ class Main(Base):
         lines = self.buffer[start - 1: end]
         lines = [f"{line} {line}" for line in lines]
         self.buffer[start - 1: end] = lines
+
+    @neovim.command('FormatXML')
+    def pretty_print_xml(self):
+        # todo, some special content may be changed
+        lines = [line.strip() for line in self.buffer]
+        starter = []
+        first_line = lines[0]
+        if '<?xml' in first_line.lower():
+            starter.append(first_line)
+            lines = lines[1:]
+        first_line = lines[0]
+        if '<!DOCTYPE' in first_line.upper():
+            starter.append(first_line)
+            lines = lines[1:]
+        xml_string = ''.join(lines)
+        xml_string = minidom.parseString(xml_string).toprettyxml(indent='  ')
+        lines = xml_string.split('\n')[1:]
+        while not lines[-1]:
+            lines.pop(-1)
+        lines = [common.keep_space_in_xml_node_end_if_has_props(line) for line in lines]
+        self.buffer[:] = starter + lines
 
 
 if __name__ == '__main__':
