@@ -21,6 +21,10 @@ class Base(object):
         return self.nvim.current.window
 
     @property
+    def tabpage(self):
+        return self.nvim.current.tabpage
+
+    @property
     def buffer(self):
         return self.nvim.current.buffer
 
@@ -41,6 +45,15 @@ class Base(object):
     def col(self):
         # startswith 0
         return self.cursor[1]
+
+    def get_global_variable(self, name):
+        return self.nvim.vars.get(name, None)
+        """
+        try:
+            return self.nvim.eval(f"g:{name}")
+        except Exception:
+            return
+        """
 
     def get_char_before_cursor(self):
         row, col = self.window.cursor
@@ -64,6 +77,21 @@ class Base(object):
     def replace_line_one_by_one(self, new_line):
         self.replace_line_by_cursor([new_line])
 
+    def move_tabpage_right(self):
+        total_number = self.nvim.call('tabpagenr', '$')
+        if self.tabpage.number == total_number:
+            cmd = 'tabmove 0'
+        else:
+            cmd = 'tabmove +1'
+        self.nvim.command(cmd)
+
+    def move_tabpage_left(self):
+        if self.tabpage.number == 1:
+            cmd = 'tabmove $'
+        else:
+            cmd = 'tabmove -1'
+        self.nvim.command(cmd)
+
 
 @neovim.plugin
 class Main(Base):
@@ -80,11 +108,11 @@ class Main(Base):
 
     @neovim.command('ShowSysPath')
     def show_sys_path(self):
-        command = '/usr/local/bin/python'
+        cmd = '/usr/local/bin/python'
         virtual_env = os.environ.get('VIRTUAL_ENV', '')
         if virtual_env:
-            command = os.path.join(virtual_env, 'bin/python')
-        output = self.nvim.command_output(f'!{command} -c "import sys;print(sys.path)"')
+            cmd = os.path.join(virtual_env, 'bin/python')
+        output = self.nvim.command_output(f'!{cmd} -c "import sys;print(sys.path)"')
         logger.info(output)
         paths = eval(output.split('\n')[-2])
         for p in paths:
@@ -150,6 +178,26 @@ class Main(Base):
             lines.pop(-1)
         lines = [common.keep_space_in_xml_node_end_if_has_props(line) for line in lines]
         self.buffer[:] = starter + lines
+
+    @neovim.command('MoveTabpage', nargs=1)
+    def move_tabpage(self, args):
+        assert type(args) is list
+        assert len(args) == 1
+        direction = args[0]
+        if direction == '+1':
+            self.move_tabpage_right()
+        elif direction == '-1':
+            self.move_tabpage_left()
+        else:
+            self.nvim.err_write('need to be +1 or -1\n')
+
+    @neovim.function('FuncMoveTabpage')
+    def func_move_tabpage(self, args):
+        direction = args[0]
+        if direction == 1:
+            self.move_tabpage_right()
+        elif direction == -1:
+            self.move_tabpage_left()
 
 
 if __name__ == '__main__':
