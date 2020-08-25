@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
+import os
 
 import neovim
 from xml.dom import minidom
@@ -80,7 +80,14 @@ class Main(Base):
 
     @neovim.command('ShowSysPath')
     def show_sys_path(self):
-        for p in sys.path:
+        command = '/usr/local/bin/python'
+        virtual_env = os.environ.get('VIRTUAL_ENV', '')
+        if virtual_env:
+            command = os.path.join(virtual_env, 'bin/python')
+        output = self.nvim.command_output(f'!{command} -c "import sys;print(sys.path)"')
+        logger.info(output)
+        paths = eval(output.split('\n')[-2])
+        for p in paths:
             logger.info(p)
             self.nvim.out_write(f"{p}\n")
 
